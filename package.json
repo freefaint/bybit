@@ -1,0 +1,22 @@
+{
+  "name": "bybit",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "concurrently -n BACK,FRONT -c blue,green \"npm -w apps/backend run start:dev\" \"npm -w apps/frontend run dev\"",
+    "build": "npm -w apps/backend run build && npm -w apps/frontend run build",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0",
+    "eslint": "^9.7.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.2"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.9.0"
+}

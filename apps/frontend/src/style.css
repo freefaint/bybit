@@ -1,0 +1,8 @@
+* {
+  font-family: monospace;
+}
+
+body {
+  filter: invert(0.9) hue-rotate(180deg);
+  margin: 0;
+}

@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "dom"],
+    "moduleResolution": "node",
+    "module": "commonjs",
+    "jsx": "react-jsx",
+    "strict": true,
+    "baseUrl": ".",
+    "paths": { "@shared/*": ["../../packages/shared/src/*"] },
+    "esModuleInterop": true,
+    "noImplicitAny": false,
+    "skipLibCheck": true
+  },
+  "include": ["src"],
+  "references": []
+}

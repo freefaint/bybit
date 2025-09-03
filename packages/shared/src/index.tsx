@@ -1,0 +1,1 @@
+export type SubscribeRequest = { symbols: string[]; streams?: string[] };
