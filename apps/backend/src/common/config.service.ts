@@ -4,7 +4,7 @@ dotenv.config({ path: process.env.CONFIG_PATH || undefined });
 
 export class ConfigService {
   readonly port = Number(process.env.PORT || 3000);
-  readonly corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:8080';
+  readonly corsOrigin = process.env.CORS_ORIGIN || 'https://freefaint.ru';
 
   readonly bybitApiKey = process.env.BYBIT_API_KEY || '';
   readonly bybitApiSecret = process.env.BYBIT_API_SECRET || '';
