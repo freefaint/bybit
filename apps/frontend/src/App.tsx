@@ -88,7 +88,7 @@ export default function App() {
   )), [pairs, orderbooks, candles]);
 
   return (
-    <div style={{ display: "flex", height: '100vh', alignItems: 'center', background: "#fff", flexWrap: 'wrap', justifyContent: 'center', gap: 16, margin: '0 auto', padding: 16 }}>
+    <div style={{ display: "flex", minHeight: '100vh', alignItems: 'center', background: "#fff", flexWrap: 'wrap', justifyContent: 'center', gap: 16, margin: '0 auto', padding: 16 }}>
       {/* <h1>Bybit Monitor</h1>
       <PairSelector
         value={pairs}
