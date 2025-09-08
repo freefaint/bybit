@@ -12,7 +12,7 @@ type OBMap = Record<string, { bids: OBRow[]; asks: OBRow[] }>;
 type Candle = { time: number; open: number; high: number; low: number; close: number };
 
 export default function App() {
-  const [pairs, setPairs] = useState<string[]>(['TAUSDT', 'CAMPUSDT', 'BTCUSDT', 'ETHUSDT']);
+  const [pairs, setPairs] = useState<string[]>(['TAUSDT', 'MEXUSDT', 'BTCUSDT', 'ETHUSDT']);
   const [orderbooks, setOrderbooks] = useState<OBMap>({});
   const [candles, setCandles] = useState<Record<string, Candle[]>>({});
 
