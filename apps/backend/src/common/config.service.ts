@@ -9,11 +9,11 @@ export class ConfigService {
   readonly bybitApiKey = process.env.BYBIT_API_KEY || '';
   readonly bybitApiSecret = process.env.BYBIT_API_SECRET || '';
   readonly bybitUseTestnet = (process.env.BYBIT_USE_TESTNET || 'true') === 'true';
-  readonly bybitCategory = (process.env.BYBIT_CATEGORY || 'spot') as
+  readonly bybitCategory = 'linear';/*(process.env.BYBIT_CATEGORY || 'spot') as
     | 'spot'
     | 'linear'
     | 'inverse'
-    | 'option';
+    | 'option';*/
 
   get httpBase() {
     return this.bybitUseTestnet ? 'https://api-testnet.bybit.com' : 'https://api.bybit.com';
