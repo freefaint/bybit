@@ -119,7 +119,7 @@ export const Balance = ({ onChange }: { onChange: (val: number) => void }) => {
     socket.on('wallet:update', (state) => {
       // state: { ts, byCoin: { USDT: { equity, availableBalance, ... }, ... } }
       setResult(state);
-      onChange(state.byCoin.USDT?.equity - state.byCoin.USDT?.equity)
+      onChange(state.byCoin.USDT?.equity - state.byCoin.USDT?.walletBalance)
       ref.current = state.byCoin.USDT?.equity;
     });
 
