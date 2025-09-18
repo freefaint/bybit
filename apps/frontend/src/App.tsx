@@ -90,7 +90,7 @@ export default function App() {
   const [how, setHow] = useState(0)
 
   return (
-    <div style={{ minHeight: '100vh', background: how > 0 ? "#cfc" : how < 0 ? "#fcc" : "#fff", margin: '0 auto', padding: 8 }}>
+    <div style={{ minHeight: '100vh', transition: "color 100ms ease-in-out", background: how > 0 ? "#cfc" : how < 0 ? "#fdd" : "#fff", margin: '0 auto', padding: 8 }}>
       <Balance onChange={setHow} />
 
       <div style={{ display: "flex", alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', gap: 8,  }}>
@@ -128,5 +128,8 @@ export const Balance = ({ onChange }: { onChange: (val: number) => void }) => {
       socket.emit('wallet:unsubscribe');
     }
   }, []);
-  return <div><h1 style={{ textAlign: "center", margin: 0 }}>{result?.byCoin?.USDT?.equity && Number(Math.ceil(result?.byCoin?.USDT?.equity * 100) / 100).toLocaleString('ru-RU')} USDT</h1></div>
+
+  if (!result.byCoin) return null;
+
+  return <div><h1 style={{ textAlign: "center", margin: 0 }}><span style={{ color: result?.byCoin?.USDT?.equity > result?.byCoin?.USDT?.walletBalance ? "#050" : result?.byCoin?.USDT?.equity < result?.byCoin?.USDT?.walletBalance ? "#a00" : "#fff" }}>{result?.byCoin?.USDT?.equity && Number(Math.ceil(result?.byCoin?.USDT?.equity * 100) / 100).toLocaleString('ru-RU')} USDT</span><span style={{ opacity: 0.5 }}>{result?.byCoin?.USDT?.equity !== result?.byCoin?.USDT?.walletBalance ? ` (${Number(Math.ceil(result?.byCoin?.USDT?.walletBalance * 100) / 100).toLocaleString('ru-RU')} USDT})` : ''}</span></h1></div>
 }
