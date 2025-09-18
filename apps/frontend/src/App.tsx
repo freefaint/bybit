@@ -81,7 +81,7 @@ export default function App() {
 
   const widgets = useMemo(() => pairs.map((s) => (
     <div key={s} style={{ padding: 12 }}>
-      <h2 style={{ marginTop: 0 }}>{s}</h2>
+      <h4 style={{ marginTop: 0 }}>{s}</h4>
       {/* <OrderBook symbol={s} bids={orderbooks[s]?.bids || []} asks={orderbooks[s]?.asks || []} /> */}
       <CandleChart onLoadMore={loadMore} symbol={s} candles={candles[s] || []} />
     </div>
