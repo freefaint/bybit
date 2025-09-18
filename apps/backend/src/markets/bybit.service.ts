@@ -162,6 +162,7 @@ export class BybitService implements OnModuleDestroy {
 
     // 1) стянем начальный снапшот через REST
     try {
+      console.log(1234)
       const { byCoin } = await this.getBalanceREST({ accountType: 'UNIFIED' });
       
       this.wallet$.next({ ts: Date.now(), byCoin });
@@ -171,6 +172,7 @@ export class BybitService implements OnModuleDestroy {
 
     setInterval(async () => {
       try {
+        console.log(12345)
         const { byCoin } = await this.getBalanceREST({ accountType: 'UNIFIED' });
         
         this.wallet$.next({ ts: Date.now(), byCoin });

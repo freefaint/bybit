@@ -14,7 +14,7 @@ export default function CandleChart({ symbol, candles, onLoadMore }: Props) {
   // создаём чарт один раз на символ
   useEffect(() => {
     if (!ref.current) return;
-    const chart = createChart(ref.current, { height: 200, width: 400 });
+    const chart = createChart(ref.current, { height: document.body.clientWidth / 3, width: document.body.clientWidth / 2.2 });
     const series = chart.addCandlestickSeries({
       priceFormat: { type: 'price', precision: 5, minMove: 0.00001 },
     });

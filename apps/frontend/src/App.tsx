@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import PairSelector from './components/PairSelector';
 import OrderBook from './components/OrderBook';
 import CandleChart from './components/CandleChart';
@@ -87,9 +87,11 @@ export default function App() {
     </div>
   )), [pairs, orderbooks, candles]);
 
+  const [how, setHow] = useState(0)
+
   return (
-    <div style={{ minHeight: '100vh', background: "#fff", margin: '0 auto', padding: 16 }}>
-      <Balance />
+    <div style={{ minHeight: '100vh', background: how > 0 ? "#cfc" : how < 0 ? "#fcc" : "#fff", margin: '0 auto', padding: 16 }}>
+      <Balance onChange={setHow} />
 
       <div style={{ display: "flex", alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', gap: 16,  }}>
         {/* <h1>Bybit Monitor</h1>
@@ -107,8 +109,9 @@ export default function App() {
   );
 }
 
-export const Balance = () => {
+export const Balance = ({ onChange }: { onChange: (val: number) => void }) => {
   const [result, setResult] = useState<any>({});
+  const ref = useRef(0);
 
   useEffect(() => {
     socket.emit('wallet:subscribe');
@@ -116,6 +119,8 @@ export const Balance = () => {
     socket.on('wallet:update', (state) => {
       // state: { ts, byCoin: { USDT: { equity, availableBalance, ... }, ... } }
       setResult(state);
+      onChange(state.byCoin.USDT?.equity - ref.current)
+      ref.current = state.byCoin.USDT?.equity;
       console.log('wallet', state.byCoin.USDT?.equity);
     });
 
@@ -123,5 +128,5 @@ export const Balance = () => {
       socket.emit('wallet:unsubscribe');
     }
   }, []);
-  return <div><h1 style={{ textAlign: "center" }}>{result?.byCoin?.USDT?.walletBalance && Math.ceil(result?.byCoin?.USDT?.walletBalance)} USDT</h1></div>
+  return <div><h1 style={{ textAlign: "center" }}>{result?.byCoin?.USDT?.equity && Number(Math.ceil(result?.byCoin?.USDT?.equity * 100) / 100).toLocaleString('ru-RU')} USDT</h1></div>
 }
