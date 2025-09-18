@@ -69,7 +69,7 @@ export default function App() {
         const asks = (ob.asks as any).map((i: any) => ({ price: Number(i[0] ?? i.price), size: Number(i[1] ?? i.size) }));
         setOrderbooks((p) => ({ ...p, [sym]: { bids, asks } }));
 
-        const kl = await getKlines(sym, '5', 500);
+        const kl = await getKlines(sym, '1', 500);
         setCandles((p) => ({ ...p, [sym]: kl }));
       } catch (e) {
         console.error(e);
