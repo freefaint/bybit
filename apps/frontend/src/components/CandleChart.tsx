@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { createChart, ISeriesApi, Time } from 'lightweight-charts';
+import { createChart, IPriceLine, ISeriesApi, PriceLineSource, Time } from 'lightweight-charts';
 import { Kline } from 'src/lib/api';
 
 type Candle = { time: number; open: number; high: number; low: number; close: number };
@@ -10,17 +10,18 @@ export default function CandleChart({ symbol, position, large, candles, onLoadMo
   const ref = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ReturnType<typeof createChart>>();
   const seriesRef = useRef<ISeriesApi<'Candlestick'>>();
+  const stopLossRef = useRef<IPriceLine>();
 
   // создаём чарт один раз на символ
   useEffect(() => {
     if (!ref.current) return;
-    const chart = createChart(ref.current, { timeScale: { tickMarkFormatter: val => { return new Date(val * 1000).getDate() !== new Date().getDate() ? `${new Date(val * 1000).toLocaleDateString().substring(0, 5)} ${new Date(val * 1000).toLocaleTimeString().substring(0, 5)}` : `${new Date(val * 1000).toLocaleTimeString().substring(0, 5)}` } }, height: document.body.clientHeight / (large ? 1.2 : 2.8), width: document.body.clientWidth / (large ? 1.1 : 2.2) });
+    const chart = createChart(ref.current, { timeScale: { tickMarkFormatter: val => { return new Date(val * 1000).getDate() !== new Date().getDate() ? `${new Date(val * 1000).toLocaleDateString().substring(0, 5)} ${new Date(val * 1000).toLocaleTimeString().substring(0, 5)}` : `${new Date(val * 1000).toLocaleTimeString().substring(0, 5)}` } }, height: document.body.clientHeight / (large ? 1.3 : 2.9), width: document.body.clientWidth / (large ? 1.1 : 2.2) });
     const series = chart.addCandlestickSeries({
       priceFormat: { type: 'price', precision: 5, minMove: 0.00001 },
     });
     if (position) {
       series.createPriceLine({
-        price: position.avgPrice,
+        price: Number(position.avgPrice),
         color: '#000', // зелёная линия
         lineWidth: 1,
         lineStyle: 0, // 0 = solid, 1 = dotted, 2 = dashed
@@ -29,16 +30,6 @@ export default function CandleChart({ symbol, position, large, candles, onLoadMo
       });
     }
 
-    if (position?.stopLoss) {
-      series.createPriceLine({
-        price: position.stopLoss,
-        color: '#afa', // зелёная линия
-        lineWidth: 1,
-        lineStyle: 2, // 0 = solid, 1 = dotted, 2 = dashed
-        axisLabelVisible: true, // показывать подпись на оси
-        title: 'SL', // подпись возле линии
-      });
-    }
     chartRef.current = chart;
     seriesRef.current = series;
 
@@ -64,6 +55,23 @@ export default function CandleChart({ symbol, position, large, candles, onLoadMo
 
     return () => chart.remove();
   }, [symbol]);
+
+  useEffect(() => {
+    if (stopLossRef.current) {
+      seriesRef.current?.removePriceLine(stopLossRef.current);
+    }
+
+    if (position?.stopLoss) {
+      stopLossRef.current = seriesRef.current!.createPriceLine({
+        price: Number(position.stopLoss),
+        color: '#a00', // зелёная линия
+        lineWidth: 1,
+        lineStyle: 1, // 0 = solid, 1 = dotted, 2 = dashed
+        axisLabelVisible: true, // показывать подпись на оси
+        title: 'SL', // подпись возле линии
+      });
+    }
+  }, [position]);
 
   // обновление данных без пересоздания чарта
   useEffect(() => {

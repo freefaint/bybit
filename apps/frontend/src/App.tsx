@@ -108,8 +108,6 @@ export default function App() {
 
   const [how, setHow] = useState(0)
 
-  console.log(positions, orders);
-
   useEffect(() => {
     setPairs(positions.length ? [positions[0].symbol] : ['TAUSDT', 'MYXUSDT', 'WUSDT', 'EIGENUSDT']);
   }, [JSON.stringify(positions)])
@@ -144,7 +142,8 @@ export const Balance = ({ onChange }: { onChange: (val: number) => void }) => {
     socket.on('wallet:update', (state) => {
       // state: { ts, byCoin: { USDT: { equity, availableBalance, ... }, ... } }
       setResult(state);
-      onChange(state.byCoin.USDT?.equity - state.byCoin.USDT?.walletBalance)
+      onChange(state.byCoin.USDT?.equity - state.byCoin.USDT?.walletBalance);
+      console.log(state.byCoin.USDT?.equity, state.byCoin.USDT?.walletBalance);
       ref.current = state.byCoin.USDT?.equity;
     });
 
