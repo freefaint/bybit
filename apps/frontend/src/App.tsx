@@ -88,16 +88,40 @@ export default function App() {
   )), [pairs, orderbooks, candles]);
 
   return (
-    <div style={{ display: "flex", minHeight: '100vh', alignItems: 'center', background: "#fff", flexWrap: 'wrap', justifyContent: 'center', gap: 16, margin: '0 auto', padding: 16 }}>
-      {/* <h1>Bybit Monitor</h1>
-      <PairSelector
-        value={pairs}
-        onChange={(symbols) => {
-          setPairs(symbols);
-          subscribeAndPrime(symbols); // твоя функция подписки + первичной загрузки
-        }}
-      /> */}
-      {widgets}
+    <div style={{ minHeight: '100vh', background: "#fff", margin: '0 auto', padding: 16 }}>
+      <Balance />
+
+      <div style={{ display: "flex", alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', gap: 16,  }}>
+        {/* <h1>Bybit Monitor</h1>
+        <PairSelector
+          value={pairs}
+          onChange={(symbols) => {
+            setPairs(symbols);
+            subscribeAndPrime(symbols); // твоя функция подписки + первичной загрузки
+          }}
+        /> */}
+        
+        {widgets}
+      </div>
     </div>
   );
+}
+
+export const Balance = () => {
+  const [result, setResult] = useState<any>({});
+
+  useEffect(() => {
+    socket.emit('wallet:subscribe');
+
+    socket.on('wallet:update', (state) => {
+      // state: { ts, byCoin: { USDT: { equity, availableBalance, ... }, ... } }
+      setResult(state);
+      console.log('wallet', state.byCoin.USDT?.equity);
+    });
+
+    return () => {
+      socket.emit('wallet:unsubscribe');
+    }
+  }, []);
+  return <div><h1 style={{ textAlign: "center" }}>{result?.byCoin?.USDT?.walletBalance} USDT</h1></div>
 }
