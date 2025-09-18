@@ -123,5 +123,5 @@ export const Balance = () => {
       socket.emit('wallet:unsubscribe');
     }
   }, []);
-  return <div><h1 style={{ textAlign: "center" }}>{result?.byCoin?.USDT?.walletBalance} USDT</h1></div>
+  return <div><h1 style={{ textAlign: "center" }}>{result?.byCoin?.USDT?.walletBalance && Math.ceil(result?.byCoin?.USDT?.walletBalance)} USDT</h1></div>
 }
