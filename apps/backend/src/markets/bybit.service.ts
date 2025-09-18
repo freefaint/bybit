@@ -161,13 +161,13 @@ export class BybitService implements OnModuleDestroy {
     this.walletFeedStarted = true;
 
     // 1) стянем начальный снапшот через REST
-    try {
-      const { byCoin } = await this.getBalanceREST({ accountType: 'UNIFIED' });
+    // try {
+    //   const { byCoin } = await this.getBalanceREST({ accountType: 'UNIFIED' });
       
-      this.wallet$.next({ ts: Date.now(), byCoin });
-    } catch (e) {
-      Logger.warn(`[WALLET] initial REST failed: ${String(e)}`);
-    }
+    //   this.wallet$.next({ ts: Date.now(), byCoin });
+    // } catch (e) {
+    //   Logger.warn(`[WALLET] initial REST failed: ${String(e)}`);
+    // }
 
     setInterval(async () => {
       try {
@@ -177,7 +177,7 @@ export class BybitService implements OnModuleDestroy {
       } catch (e) {
         Logger.warn(`[WALLET] initial REST failed: ${String(e)}`);
       }
-    }, 1000);
+    }, 2000);
 
     // 2) подпишемся на приватный wallet
     const topic = 'wallet';
