@@ -119,9 +119,8 @@ export const Balance = ({ onChange }: { onChange: (val: number) => void }) => {
     socket.on('wallet:update', (state) => {
       // state: { ts, byCoin: { USDT: { equity, availableBalance, ... }, ... } }
       setResult(state);
-      onChange(state.byCoin.USDT?.equity - ref.current)
+      onChange(state.byCoin.USDT?.equity - state.byCoin.USDT?.equity)
       ref.current = state.byCoin.USDT?.equity;
-      console.log('wallet', state.byCoin.USDT?.equity);
     });
 
     return () => {
@@ -131,5 +130,5 @@ export const Balance = ({ onChange }: { onChange: (val: number) => void }) => {
 
   if (!result.byCoin) return null;
 
-  return <div><h1 style={{ textAlign: "center", margin: 0 }}><span style={{ color: result?.byCoin?.USDT?.equity > result?.byCoin?.USDT?.walletBalance ? "#050" : result?.byCoin?.USDT?.equity < result?.byCoin?.USDT?.walletBalance ? "#a00" : "#000" }}>{result?.byCoin?.USDT?.equity && Number(Math.ceil(result?.byCoin?.USDT?.equity * 100) / 100).toLocaleString('ru-RU')} USDT</span><span style={{ opacity: 0.5 }}>{result?.byCoin?.USDT?.equity !== result?.byCoin?.USDT?.walletBalance ? ` (${Number(Math.ceil(result?.byCoin?.USDT?.walletBalance * 100) / 100).toLocaleString('ru-RU')} USDT})` : ''}</span></h1></div>
+  return <div><h1 style={{ textAlign: "center", margin: 0 }}><span style={{ color: result?.byCoin?.USDT?.equity > ref.current ? "#050" : result?.byCoin?.USDT?.equity < ref.current ? "#a00" : "#000" }}>{result?.byCoin?.USDT?.equity && Number(Math.ceil(result?.byCoin?.USDT?.equity * 100) / 100).toLocaleString('ru-RU')} USDT</span><span style={{ opacity: 0.5 }}>{result?.byCoin?.USDT?.equity !== result?.byCoin?.USDT?.walletBalance ? ` (${Number(Math.ceil(result?.byCoin?.USDT?.walletBalance * 100) / 100).toLocaleString('ru-RU')} USDT})` : ''}</span></h1></div>
 }
