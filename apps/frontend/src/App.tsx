@@ -90,10 +90,10 @@ export default function App() {
   const [how, setHow] = useState(0)
 
   return (
-    <div style={{ minHeight: '100vh', background: how > 0 ? "#cfc" : how < 0 ? "#fcc" : "#fff", margin: '0 auto', padding: 16 }}>
+    <div style={{ minHeight: '100vh', background: how > 0 ? "#cfc" : how < 0 ? "#fcc" : "#fff", margin: '0 auto', padding: 8 }}>
       <Balance onChange={setHow} />
 
-      <div style={{ display: "flex", alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', gap: 16,  }}>
+      <div style={{ display: "flex", alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', gap: 8,  }}>
         {/* <h1>Bybit Monitor</h1>
         <PairSelector
           value={pairs}
@@ -128,5 +128,5 @@ export const Balance = ({ onChange }: { onChange: (val: number) => void }) => {
       socket.emit('wallet:unsubscribe');
     }
   }, []);
-  return <div><h1 style={{ textAlign: "center" }}>{result?.byCoin?.USDT?.equity && Number(Math.ceil(result?.byCoin?.USDT?.equity * 100) / 100).toLocaleString('ru-RU')} USDT</h1></div>
+  return <div><h1 style={{ textAlign: "center", margin: 0 }}>{result?.byCoin?.USDT?.equity && Number(Math.ceil(result?.byCoin?.USDT?.equity * 100) / 100).toLocaleString('ru-RU')} USDT</h1></div>
 }
