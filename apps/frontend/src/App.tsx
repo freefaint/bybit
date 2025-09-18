@@ -22,7 +22,7 @@ export default function App() {
     const timer = setInterval(() => {
       getPositions().then(setPositions)
       getOrders().then(setOrders)
-    }, 1000);
+    }, 3000);
 
     return () => {
 
@@ -135,6 +135,7 @@ export default function App() {
 export const Balance = ({ onChange }: { onChange: (val: number) => void }) => {
   const [result, setResult] = useState<any>({});
   const ref = useRef(0);
+  const [how, setHow] = useState(0)
 
   useEffect(() => {
     socket.emit('wallet:subscribe');
@@ -143,6 +144,7 @@ export const Balance = ({ onChange }: { onChange: (val: number) => void }) => {
       // state: { ts, byCoin: { USDT: { equity, availableBalance, ... }, ... } }
       setResult(state);
       onChange(state.byCoin.USDT?.equity - state.byCoin.USDT?.walletBalance);
+      setHow(result?.byCoin?.USDT?.equity - ref.current);
       console.log(state.byCoin.USDT?.equity, state.byCoin.USDT?.walletBalance);
       ref.current = state.byCoin.USDT?.equity;
     });
@@ -157,7 +159,7 @@ export const Balance = ({ onChange }: { onChange: (val: number) => void }) => {
   return (
     <div>
       <h1 style={{ textAlign: "center", margin: 0 }}>
-        <span style={{ color: result?.byCoin?.USDT?.equity > ref.current ? "#050" : result?.byCoin?.USDT?.equity < ref.current ? "#a00" : "#000" }}>{result?.byCoin?.USDT?.equity && Number(Math.ceil(result?.byCoin?.USDT?.equity * 100) / 100).toLocaleString('ru-RU')} USDT</span>
+        <span style={{ color: how > 0 ? "#050" : how < 0 ? "#a00" : "#000" }}>{result?.byCoin?.USDT?.equity && Number(Math.ceil(result?.byCoin?.USDT?.equity * 100) / 100).toLocaleString('ru-RU')} USDT</span>
         <span style={{ opacity: 0.25 }}>{result?.byCoin?.USDT?.equity !== result?.byCoin?.USDT?.walletBalance ? ` (${Number(Math.ceil(result?.byCoin?.USDT?.walletBalance * 100) / 100).toLocaleString('ru-RU')} USDT)` : ''}</span>
       </h1>
     </div>
