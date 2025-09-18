@@ -6,3 +6,7 @@ body {
   filter: invert(0.9) hue-rotate(180deg);
   margin: 0;
 }
+
+canvas {
+  mix-blend-mode: multiply;
+}
