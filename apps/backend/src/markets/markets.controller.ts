@@ -22,6 +22,18 @@ export class MarketsController {
     return { symbols };
   }
 
+  @Get('orders')
+  async orders() {
+    const res = await this.bybit.getOpenOrders();
+    return { orders: res?.result?.list };
+  }
+
+  @Get('positions')
+  async positions() {
+    const res = await this.bybit.getOpenPositions();
+    return { positions: res?.result?.list };
+  }
+
   // Простой REST: стакан по символу
   @Get('orderbook')
   async orderbook(@Query('symbol') symbol: string, @Query('depth') depth = '50') {

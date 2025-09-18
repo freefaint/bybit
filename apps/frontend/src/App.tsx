@@ -3,7 +3,7 @@ import PairSelector from './components/PairSelector';
 import OrderBook from './components/OrderBook';
 import CandleChart from './components/CandleChart';
 import { socket } from './lib/socket';
-import { getOrderBook, getKlines } from './lib/api';
+import { getOrderBook, getKlines, getPositions, getOrders } from './lib/api';
 
 type OBRow = { price: number; size: number };
 
@@ -12,9 +12,22 @@ type OBMap = Record<string, { bids: OBRow[]; asks: OBRow[] }>;
 type Candle = { time: number; open: number; high: number; low: number; close: number };
 
 export default function App() {
-  const [pairs, setPairs] = useState<string[]>(['TAUSDT', 'MYXUSDT', 'BTCUSDT', 'ETHUSDT']);
+  const [pairs, setPairs] = useState<string[]>(['TAUSDT', 'MYXUSDT', 'WUSDT', 'EIGENUSDT']) //, 'BTCUSDT', 'ETHUSDT']);
   const [orderbooks, setOrderbooks] = useState<OBMap>({});
   const [candles, setCandles] = useState<Record<string, Candle[]>>({});
+  const [positions, setPositions] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      getPositions().then(setPositions)
+      getOrders().then(setOrders)
+    }, 1000);
+
+    return () => {
+
+    }
+  }, []);
 
   useEffect(() => {
     socket.on('orderbook', ({ symbol, data }) => {
@@ -77,21 +90,27 @@ export default function App() {
     }
   };
 
-  useEffect(() => { subscribeAndPrime(pairs); }, []);
+  useEffect(() => { subscribeAndPrime(pairs); }, [pairs]);
 
   const widgets = useMemo(() => pairs.map((s) => (
     <div key={s} style={{ padding: 12 }}>
       <h4 style={{ marginTop: 0 }}>{s}</h4>
       {/* <OrderBook symbol={s} bids={orderbooks[s]?.bids || []} asks={orderbooks[s]?.asks || []} /> */}
-      <CandleChart onLoadMore={loadMore} symbol={s} candles={candles[s] || []} />
+      <CandleChart large={pairs.length === 1} onLoadMore={loadMore} symbol={s} candles={candles[s] || []} />
     </div>
   )), [pairs, orderbooks, candles]);
 
   const [how, setHow] = useState(0)
 
+  console.log(positions, orders);
+
+  useEffect(() => {
+    setPairs(positions.length ? [positions[0].symbol] : ['TAUSDT', 'MYXUSDT', 'WUSDT', 'EIGENUSDT']);
+  }, [JSON.stringify(positions)])
+
   return (
-    <div style={{ minHeight: '100vh', transition: "color 100ms ease-in-out", background: how > 0 ? "#cfc" : how < 0 ? "#fdd" : "#fff", margin: '0 auto', padding: 8 }}>
-      <Balance onChange={setHow} />
+    <div style={{ minHeight: '100vh', transition: "all 100ms ease-in-out", background: how > 0 ? "#cfc" : how < 0 ? "#fdd" : "#fff", margin: '0 auto', padding: 8 }}>
+      <Balance onChange={val => how !== val ? setHow(val) : void 0} />
 
       <div style={{ display: "flex", alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', gap: 8,  }}>
         {/* <h1>Bybit Monitor</h1>
@@ -130,5 +149,12 @@ export const Balance = ({ onChange }: { onChange: (val: number) => void }) => {
 
   if (!result.byCoin) return null;
 
-  return <div><h1 style={{ textAlign: "center", margin: 0 }}><span style={{ color: result?.byCoin?.USDT?.equity > ref.current ? "#050" : result?.byCoin?.USDT?.equity < ref.current ? "#a00" : "#000" }}>{result?.byCoin?.USDT?.equity && Number(Math.ceil(result?.byCoin?.USDT?.equity * 100) / 100).toLocaleString('ru-RU')} USDT</span><span style={{ opacity: 0.25 }}>{result?.byCoin?.USDT?.equity !== result?.byCoin?.USDT?.walletBalance ? ` (${Number(Math.ceil(result?.byCoin?.USDT?.walletBalance * 100) / 100).toLocaleString('ru-RU')} USDT)` : ''}</span></h1></div>
+  return (
+    <div>
+      <h1 style={{ textAlign: "center", margin: 0 }}>
+        <span style={{ color: result?.byCoin?.USDT?.equity > ref.current ? "#050" : result?.byCoin?.USDT?.equity < ref.current ? "#a00" : "#000" }}>{result?.byCoin?.USDT?.equity && Number(Math.ceil(result?.byCoin?.USDT?.equity * 100) / 100).toLocaleString('ru-RU')} USDT</span>
+        <span style={{ opacity: 0.25 }}>{result?.byCoin?.USDT?.equity !== result?.byCoin?.USDT?.walletBalance ? ` (${Number(Math.ceil(result?.byCoin?.USDT?.walletBalance * 100) / 100).toLocaleString('ru-RU')} USDT)` : ''}</span>
+      </h1>
+    </div>
+  )
 }

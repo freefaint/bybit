@@ -32,3 +32,13 @@ export async function getSymbols(): Promise<string[]> {
   const { data } = await api.get('/symbols');
   return data.symbols as string[];
 }
+
+export async function getOrders(): Promise<any[]> {
+  const { data } = await api.get('/orders');
+  return data.orders as any[];
+}
+
+export async function getPositions(): Promise<any[]> {
+  const { data } = await api.get('/positions');
+  return data.positions as any[];
+}

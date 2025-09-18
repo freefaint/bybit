@@ -171,7 +171,6 @@ export class BybitService implements OnModuleDestroy {
 
     setInterval(async () => {
       try {
-        console.log(12345)
         const { byCoin } = await this.getBalanceREST({ accountType: 'UNIFIED' });
         
         this.wallet$.next({ ts: Date.now(), byCoin });
@@ -278,5 +277,42 @@ export class BybitService implements OnModuleDestroy {
       }
     }
     return { byCoin: out };
+  }
+
+  async getOpenOrders(category = 'linear', symbol?: string) {
+    try {
+      // SDK: getActiveOrders -> maps to GET /v5/order/realtime
+      const params: any = { category, openOnly: 1 };
+      if (symbol) params.symbol = symbol;
+
+      const res = await this.rest.getActiveOrders({ ...params, settleCoin: "USDT" });
+      // res обычно содержит { ret_code, ret_msg, result, time_now } или уже распарсенный result
+      // Проверь структуру в своём SDK (логируем для разработки)
+      Logger.debug('Bybit getOpenOrders result', res);
+      return res;
+    } catch (err) {
+      Logger.error('Failed to fetch open orders', err);
+      throw err;
+    }
+  }
+
+  async getOpenPositions(category = 'linear', symbol?: string) {
+    try {
+      // В официальной доке endpoint: GET /v5/position/list
+      const params: any = { category };
+      // Важное: для некоторых категорий Bybit требует либо symbol, либо settleCoin — если не передаёшь, вернётся ошибка.
+      if (symbol) params.symbol = symbol;
+
+      // SDK-метод может называться getPositionList / getPositions / getPositionsList — попробуй эти имена,
+      // но обычно в SDK есть функция, которая маппится на /v5/position/list.
+      // Пробуем общепринятое имя:
+      const res = await this.rest.getPositionInfo({ ...params, settleCoin: "USDT" })
+
+      Logger.debug('Bybit getOpenPositions result', res);
+      return res;
+    } catch (err) {
+      Logger.error('Failed to fetch positions', err);
+      throw err;
+    }
   }
 }
