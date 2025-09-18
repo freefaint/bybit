@@ -162,12 +162,22 @@ export class BybitService implements OnModuleDestroy {
 
     // 1) стянем начальный снапшот через REST
     try {
-      const { byCoin, ...rest } = await this.getBalanceREST({ accountType: 'UNIFIED' });
-      console.log(123, byCoin, rest);
+      const { byCoin } = await this.getBalanceREST({ accountType: 'UNIFIED' });
+      
       this.wallet$.next({ ts: Date.now(), byCoin });
     } catch (e) {
       Logger.warn(`[WALLET] initial REST failed: ${String(e)}`);
     }
+
+    setInterval(async () => {
+      try {
+        const { byCoin } = await this.getBalanceREST({ accountType: 'UNIFIED' });
+        
+        this.wallet$.next({ ts: Date.now(), byCoin });
+      } catch (e) {
+        Logger.warn(`[WALLET] initial REST failed: ${String(e)}`);
+      }
+    }, 1000);
 
     // 2) подпишемся на приватный wallet
     const topic = 'wallet';
@@ -251,7 +261,7 @@ export class BybitService implements OnModuleDestroy {
     const coin = params?.coin;
 
     const res = await this.rest.getWalletBalance({ accountType, ...(coin ? { coin } : {}) });
-    console.log(123, res);
+
     const out: Record<string, WalletCoin> = {};
     for (const acct of res.result?.list ?? []) {
       for (const d of acct?.coin ?? []) {
