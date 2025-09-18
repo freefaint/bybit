@@ -14,7 +14,7 @@ export default function CandleChart({ symbol, candles, onLoadMore }: Props) {
   // создаём чарт один раз на символ
   useEffect(() => {
     if (!ref.current) return;
-    const chart = createChart(ref.current, { timeScale: { tickMarkFormatter: val => new Date(val).getDay() !== new Date().getDay() ? `${new Date(val).toLocaleDateString()} ${new Date(val).toLocaleTimeString()}` : `${new Date(val).toLocaleTimeString()}` }, height: document.body.clientHeight / 3, width: document.body.clientWidth / 2.2 });
+    const chart = createChart(ref.current, { timeScale: { tickMarkFormatter: val => new Date(val).getDate() !== new Date().getDate() ? `${new Date(val).toLocaleDateString().substring(0, 5)} ${new Date(val).toLocaleTimeString().substring(0, 5)}` : `${new Date(val).toLocaleTimeString().substring(0, 5)}` }, height: document.body.clientHeight / 3, width: document.body.clientWidth / 2.2 });
     const series = chart.addCandlestickSeries({
       priceFormat: { type: 'price', precision: 5, minMove: 0.00001 },
     });
