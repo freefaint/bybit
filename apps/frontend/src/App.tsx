@@ -131,5 +131,5 @@ export const Balance = ({ onChange }: { onChange: (val: number) => void }) => {
 
   if (!result.byCoin) return null;
 
-  return <div><h1 style={{ textAlign: "center", margin: 0 }}><span style={{ color: result?.byCoin?.USDT?.equity > result?.byCoin?.USDT?.walletBalance ? "#050" : result?.byCoin?.USDT?.equity < result?.byCoin?.USDT?.walletBalance ? "#a00" : "#fff" }}>{result?.byCoin?.USDT?.equity && Number(Math.ceil(result?.byCoin?.USDT?.equity * 100) / 100).toLocaleString('ru-RU')} USDT</span><span style={{ opacity: 0.5 }}>{result?.byCoin?.USDT?.equity !== result?.byCoin?.USDT?.walletBalance ? ` (${Number(Math.ceil(result?.byCoin?.USDT?.walletBalance * 100) / 100).toLocaleString('ru-RU')} USDT})` : ''}</span></h1></div>
+  return <div><h1 style={{ textAlign: "center", margin: 0 }}><span style={{ color: result?.byCoin?.USDT?.equity > result?.byCoin?.USDT?.walletBalance ? "#050" : result?.byCoin?.USDT?.equity < result?.byCoin?.USDT?.walletBalance ? "#a00" : "#000" }}>{result?.byCoin?.USDT?.equity && Number(Math.ceil(result?.byCoin?.USDT?.equity * 100) / 100).toLocaleString('ru-RU')} USDT</span><span style={{ opacity: 0.5 }}>{result?.byCoin?.USDT?.equity !== result?.byCoin?.USDT?.walletBalance ? ` (${Number(Math.ceil(result?.byCoin?.USDT?.walletBalance * 100) / 100).toLocaleString('ru-RU')} USDT})` : ''}</span></h1></div>
 }
