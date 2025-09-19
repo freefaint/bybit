@@ -70,12 +70,14 @@ export default function App() {
     return older;
   }
 
+  const subs = useRef<string[]>([]);
+
   const subscribeAndPrime = async (symbols: string[]) => {
     // живые потоки
-    socket.emit('subscribe', { symbols, streams: ['kline_1m'] });
+    socket.emit('subscribe', { symbols: symbols.filter(i => !subs.current.includes(i)), streams: ['kline_1m'] });
 
     // первичная инициализация: стакан + исторические свечи
-    for (const sym of symbols) {
+    for (const sym of symbols.filter(i => !subs.current.includes(i))) {
       try {
         // const ob = await getOrderBook(sym, 50);
         // const bids = (ob.bids as any).map((i: any) => ({ price: Number(i[0] ?? i.price), size: Number(i[1] ?? i.size) }));
@@ -88,6 +90,8 @@ export default function App() {
         console.error(e);
       }
     }
+
+    subs.current = [...subs.current, ...symbols.filter(i => !subs.current.includes(i))];
   };
 
   useEffect(() => { subscribeAndPrime(pairs); }, [JSON.stringify(pairs)]);
