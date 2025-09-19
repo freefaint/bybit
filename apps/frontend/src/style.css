@@ -10,3 +10,7 @@ body {
 canvas {
   mix-blend-mode: multiply;
 }
+
+.burn canvas {
+  mix-blend-mode: color-burn;
+}

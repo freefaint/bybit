@@ -13,7 +13,7 @@ type Candle = { time: number; open: number; high: number; low: number; close: nu
 
 export default function App() {
   const [pairs, setPairs] = useState<string[]>(['TAUSDT', 'MYXUSDT', 'WUSDT', 'EIGENUSDT']) //, 'BTCUSDT', 'ETHUSDT']);
-  const [orderbooks, setOrderbooks] = useState<OBMap>({});
+  // const [orderbooks, setOrderbooks] = useState<OBMap>({});
   const [candles, setCandles] = useState<Record<string, Candle[]>>({});
   const [positions, setPositions] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
@@ -25,16 +25,16 @@ export default function App() {
     }, 3000);
 
     return () => {
-
+      clearInterval(timer);
     }
   }, []);
 
   useEffect(() => {
-    socket.on('orderbook', ({ symbol, data }) => {
-      const bids = (data.b || []).map((i: string[]) => ({ price: Number(i[0]), size: Number(i[1]) }));
-      const asks = (data.a || []).map((i: string[]) => ({ price: Number(i[0]), size: Number(i[1]) }));
-      setOrderbooks((prev) => ({ ...prev, [symbol]: { bids, asks } }));
-    });
+    // socket.on('orderbook', ({ symbol, data }) => {
+    //   const bids = (data.b || []).map((i: string[]) => ({ price: Number(i[0]), size: Number(i[1]) }));
+    //   const asks = (data.a || []).map((i: string[]) => ({ price: Number(i[0]), size: Number(i[1]) }));
+    //   setOrderbooks((prev) => ({ ...prev, [symbol]: { bids, asks } }));
+    // });
     socket.on('kline', ({ symbol, data }) => {
       const arr = Array.isArray(data) ? data : [data];
       const newCandles = arr.map((k: any) => ({
@@ -59,7 +59,7 @@ export default function App() {
       });
     });
     return () => {
-      socket.off('orderbook');
+      // socket.off('orderbook');
       socket.off('kline');
     };
   }, []);
@@ -72,15 +72,15 @@ export default function App() {
 
   const subscribeAndPrime = async (symbols: string[]) => {
     // живые потоки
-    socket.emit('subscribe', { symbols, streams: ['orderbook', 'kline_1m'] });
+    socket.emit('subscribe', { symbols, streams: ['kline_1m'] });
 
     // первичная инициализация: стакан + исторические свечи
     for (const sym of symbols) {
       try {
-        const ob = await getOrderBook(sym, 50);
-        const bids = (ob.bids as any).map((i: any) => ({ price: Number(i[0] ?? i.price), size: Number(i[1] ?? i.size) }));
-        const asks = (ob.asks as any).map((i: any) => ({ price: Number(i[0] ?? i.price), size: Number(i[1] ?? i.size) }));
-        setOrderbooks((p) => ({ ...p, [sym]: { bids, asks } }));
+        // const ob = await getOrderBook(sym, 50);
+        // const bids = (ob.bids as any).map((i: any) => ({ price: Number(i[0] ?? i.price), size: Number(i[1] ?? i.size) }));
+        // const asks = (ob.asks as any).map((i: any) => ({ price: Number(i[0] ?? i.price), size: Number(i[1] ?? i.size) }));
+        // setOrderbooks((p) => ({ ...p, [sym]: { bids, asks } }));
 
         const kl = await getKlines(sym, '1', 500);
         setCandles((p) => ({ ...p, [sym]: kl }));
@@ -90,20 +90,22 @@ export default function App() {
     }
   };
 
-  useEffect(() => { subscribeAndPrime(pairs); }, [pairs]);
+  useEffect(() => { subscribeAndPrime(pairs); }, [JSON.stringify(pairs)]);
 
-  const widgets = useMemo(() => (!positions || !positions.length ? pairs : [ ...positions.reduce((coll, i) => coll.includes(i) ? coll : [ ...coll, i ], []), ...pairs.filter(i => !positions.find(j => j.symbol === i)) ]).map((s) => (
-    <div key={s} style={{ padding: 12 }}>
+  const widgets = useMemo(() => (!positions || !positions.length ? pairs : [ ...positions.reduce((coll, i) => coll.includes(i.symbol) ? coll : [ ...coll, i.symbol ], []), ...['TAUSDT', 'MYXUSDT', 'WUSDT', 'BTCUSDT'].filter(i => !positions.find(j => j.symbol === i)) ]).slice(0, 4).map((s) => (
+    <div key={s} className={positions.length && !positions?.find?.(i => i.symbol === s) ? 'burn' : ''} style={{ padding: 12 }}>
       <h4 style={{ marginTop: 0 }}>{s}</h4>
       {/* <OrderBook symbol={s} bids={orderbooks[s]?.bids || []} asks={orderbooks[s]?.asks || []} /> */}
       <CandleChart position={positions?.find?.(i => i.symbol === s)} onLoadMore={loadMore} symbol={s} candles={candles[s] || []} />
     </div>
-  )), [pairs, orderbooks, candles, positions]);
+  )), [JSON.stringify(pairs), candles, JSON.stringify(positions)]);
 
   const [how, setHow] = useState(0)
 
+  console.log(positions);
+
   useEffect(() => {
-    setPairs(positions.length ? [positions[0].symbol] : ['TAUSDT', 'MYXUSDT', 'WUSDT', 'EIGENUSDT']);
+    setPairs(positions.length ? [positions[0].symbol] : ['TAUSDT', 'MYXUSDT', 'WUSDT', 'BTCUSDT']);
   }, [JSON.stringify(positions)])
 
   return (
@@ -139,11 +141,13 @@ export const Balance = ({ onChange }: { onChange: (val: number) => void }) => {
       setResult(state);
       onChange(state.byCoin.USDT?.equity - state.byCoin.USDT?.walletBalance);
       setHow(result?.byCoin?.USDT?.equity - ref.current);
+      console.log(how, result?.byCoin?.USDT?.equity, ref.current)
       console.log(state.byCoin.USDT?.equity, state.byCoin.USDT?.walletBalance);
       ref.current = state.byCoin.USDT?.equity;
     });
 
     return () => {
+      socket.off('wallet:update');
       socket.emit('wallet:unsubscribe');
     }
   }, []);
