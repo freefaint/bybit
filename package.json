@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "concurrently -n BACK,FRONT -c blue,green \"npm -w apps/backend run start:dev\" \"npm -w apps/frontend run dev\"",
     "build": "npm -w apps/backend run build && npm -w apps/frontend run build",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "deploy": "git fetch && git pull origin main && pnpm run build && cp -rf apps/frontend/dist/* /var/www/html"
   },
   "devDependencies": {
     "concurrently": "^9.0.0",
