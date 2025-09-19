@@ -96,7 +96,7 @@ export default function App() {
     <div key={s} style={{ padding: 12 }}>
       <h4 style={{ marginTop: 0 }}>{s}</h4>
       {/* <OrderBook symbol={s} bids={orderbooks[s]?.bids || []} asks={orderbooks[s]?.asks || []} /> */}
-      <CandleChart position={positions.find(i => i.symbol === s)} onLoadMore={loadMore} symbol={s} candles={candles[s] || []} />
+      <CandleChart position={positions?.find?.(i => i.symbol === s)} onLoadMore={loadMore} symbol={s} candles={candles[s] || []} />
     </div>
   )), [pairs, orderbooks, candles, positions]);
 
