@@ -11,11 +11,12 @@ export default function CandleChart({ symbol, position, candles, onLoadMore }: P
   const chartRef = useRef<ReturnType<typeof createChart>>();
   const seriesRef = useRef<ISeriesApi<'Candlestick'>>();
   const stopLossRef = useRef<IPriceLine>();
+  const takeProfitRef = useRef<IPriceLine>();
 
   // создаём чарт один раз на символ
   useEffect(() => {
     if (!ref.current) return;
-    const chart = createChart(ref.current, { timeScale: { tickMarkFormatter: val => { return new Date(val * 1000).getDate() !== new Date().getDate() ? `${new Date(val * 1000).toLocaleDateString().substring(0, 5)} ${new Date(val * 1000).toLocaleTimeString().substring(0, 5)}` : `${new Date(val * 1000).toLocaleTimeString().substring(0, 5)}` } }, height: document.body.clientHeight / 2.9, width: document.body.clientWidth / 2.2 });
+    const chart = createChart(ref.current, { timeScale: { barSpacing: 4, tickMarkFormatter: val => { return new Date(val * 1000).getDate() !== new Date().getDate() ? `${new Date(val * 1000).toLocaleDateString().substring(0, 5)} ${new Date(val * 1000).toLocaleTimeString().substring(0, 5)}` : `${new Date(val * 1000).toLocaleTimeString().substring(0, 5)}` } }, height: document.body.clientHeight / 2.9, width: document.body.clientWidth / 2.2 });
     const series = chart.addCandlestickSeries({
       priceFormat: { type: 'price', precision: 5, minMove: 0.00001 },
     });
@@ -60,6 +61,9 @@ export default function CandleChart({ symbol, position, candles, onLoadMore }: P
     if (stopLossRef.current) {
       seriesRef.current?.removePriceLine(stopLossRef.current);
     }
+    if (takeProfitRef.current) {
+      seriesRef.current?.removePriceLine(takeProfitRef.current);
+    }
 
     if (position?.stopLoss) {
       stopLossRef.current = seriesRef.current!.createPriceLine({
@@ -69,6 +73,17 @@ export default function CandleChart({ symbol, position, candles, onLoadMore }: P
         lineStyle: 1, // 0 = solid, 1 = dotted, 2 = dashed
         axisLabelVisible: true, // показывать подпись на оси
         title: 'SL', // подпись возле линии
+      });
+    }
+
+    if (position?.takeProfit) {
+      takeProfitRef.current = seriesRef.current!.createPriceLine({
+        price: Number(position.takeProfit),
+        color: '#0a0', // зелёная линия
+        lineWidth: 1,
+        lineStyle: 1, // 0 = solid, 1 = dotted, 2 = dashed
+        axisLabelVisible: true, // показывать подпись на оси
+        title: 'TP', // подпись возле линии
       });
     }
   }, [position]);

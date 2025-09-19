@@ -144,8 +144,8 @@ export const Balance = ({ onChange }: { onChange: (val: number) => void }) => {
       // state: { ts, byCoin: { USDT: { equity, availableBalance, ... }, ... } }
       setResult(state);
       onChange(state.byCoin.USDT?.equity - state.byCoin.USDT?.walletBalance);
-      setHow(result?.byCoin?.USDT?.equity - ref.current);
-      console.log(how, result?.byCoin?.USDT?.equity, ref.current)
+      setHow(state?.byCoin?.USDT?.equity - ref.current);
+      console.log(how, state?.byCoin?.USDT?.equity, ref.current)
       console.log(state.byCoin.USDT?.equity, state.byCoin.USDT?.walletBalance);
       ref.current = state.byCoin.USDT?.equity;
     });
