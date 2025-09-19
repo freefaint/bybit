@@ -1,5 +1,5 @@
 import { io } from 'socket.io-client';
-export const socket = io('ws://localhost:3000'/*'ws://localhost:3000'*/, { transports: ['websocket'] });
+export const socket = io('/'/*'ws://localhost:3000'*/, { transports: ['websocket'] });
 
 export type StreamEvent =
   | { type: 'ticker'; payload: any }
