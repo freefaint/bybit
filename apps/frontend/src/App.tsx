@@ -92,19 +92,13 @@ export default function App() {
 
   useEffect(() => { subscribeAndPrime(pairs); }, [pairs]);
 
-  const widgets = useMemo(() => !positions || !positions.length ? pairs.map((s) => (
+  const widgets = useMemo(() => (!positions || !positions.length ? pairs : [ ...positions.reduce((coll, i) => coll.includes(i) ? coll : [ ...coll, i ], []), ...pairs.filter(i => !positions.find(j => j.symbol === i)) ]).map((s) => (
     <div key={s} style={{ padding: 12 }}>
       <h4 style={{ marginTop: 0 }}>{s}</h4>
       {/* <OrderBook symbol={s} bids={orderbooks[s]?.bids || []} asks={orderbooks[s]?.asks || []} /> */}
-      <CandleChart large={false} position={positions.find(i => i.symbol === s)} onLoadMore={loadMore} symbol={s} candles={candles[s] || []} />
+      <CandleChart position={positions.find(i => i.symbol === s)} onLoadMore={loadMore} symbol={s} candles={candles[s] || []} />
     </div>
-  )) : (
-    <div style={{ padding: 12 }}>
-      <h4 style={{ marginTop: 0 }}>{positions[0].symbol}</h4>
-      {/* <OrderBook symbol={s} bids={orderbooks[s]?.bids || []} asks={orderbooks[s]?.asks || []} /> */}
-      <CandleChart large={true} position={positions[0]} onLoadMore={loadMore} symbol={positions[0].symbol} candles={candles[positions[0].symbol] || []} />
-    </div>
-  ), [pairs, orderbooks, candles, positions]);
+  )), [pairs, orderbooks, candles, positions]);
 
   const [how, setHow] = useState(0)
 

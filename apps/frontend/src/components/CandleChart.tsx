@@ -4,9 +4,9 @@ import { Kline } from 'src/lib/api';
 
 type Candle = { time: number; open: number; high: number; low: number; close: number };
 
-type Props = { symbol: string; candles: Candle[], position: any, large?: boolean; onLoadMore: (symbol: string, val: number) => Promise<Kline[]> };
+type Props = { symbol: string; candles: Candle[], position: any, onLoadMore: (symbol: string, val: number) => Promise<Kline[]> };
 
-export default function CandleChart({ symbol, position, large, candles, onLoadMore }: Props) {
+export default function CandleChart({ symbol, position, candles, onLoadMore }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ReturnType<typeof createChart>>();
   const seriesRef = useRef<ISeriesApi<'Candlestick'>>();
@@ -15,7 +15,7 @@ export default function CandleChart({ symbol, position, large, candles, onLoadMo
   // создаём чарт один раз на символ
   useEffect(() => {
     if (!ref.current) return;
-    const chart = createChart(ref.current, { timeScale: { tickMarkFormatter: val => { return new Date(val * 1000).getDate() !== new Date().getDate() ? `${new Date(val * 1000).toLocaleDateString().substring(0, 5)} ${new Date(val * 1000).toLocaleTimeString().substring(0, 5)}` : `${new Date(val * 1000).toLocaleTimeString().substring(0, 5)}` } }, height: document.body.clientHeight / (large ? 1.3 : 2.9), width: document.body.clientWidth / (large ? 1.1 : 2.2) });
+    const chart = createChart(ref.current, { timeScale: { tickMarkFormatter: val => { return new Date(val * 1000).getDate() !== new Date().getDate() ? `${new Date(val * 1000).toLocaleDateString().substring(0, 5)} ${new Date(val * 1000).toLocaleTimeString().substring(0, 5)}` : `${new Date(val * 1000).toLocaleTimeString().substring(0, 5)}` } }, height: document.body.clientHeight / 2.9, width: document.body.clientWidth / 2.2 });
     const series = chart.addCandlestickSeries({
       priceFormat: { type: 'price', precision: 5, minMove: 0.00001 },
     });

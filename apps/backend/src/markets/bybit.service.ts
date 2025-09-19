@@ -3,7 +3,7 @@ import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { config } from '../common/config.service';
 import { Logger } from '../common/logger';
 import { CategoryV5, RestClientV5, WebsocketClient } from 'bybit-api';
-import { BehaviorSubject, Subscription } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 
 type Handler = (msg: any) => void;
 
@@ -32,15 +32,17 @@ export class BybitService implements OnModuleDestroy {
   private ws = new WebsocketClient({
     market: 'v5',
     testnet: config.bybitUseTestnet,
-    // важное: приватка нужна для wallet
+    // приватка для wallet/ордеров/позиций
     key: config.bybitApiKey || undefined,
     secret: config.bybitApiSecret || undefined,
   });
 
   /** topic -> handlers (общая шина) */
   private listeners = new Map<string, Set<Handler>>();
-  /** активные подписки по категории */
-  private activeSubs = new Map<CategoryV5 | 'unified', Set<string>>();
+
+  /** Реестр подписок по фактическому wsKey (v5LinearPublic, v5UnifiedPrivate, ...) */
+  private subsByWsKey = new Map<string, Set<string>>();
+  private resubLock = false;
 
   /** --- ХРАНИЛКА БАЛАНСА --- */
   private wallet$ = new BehaviorSubject<WalletState | null>(null);
@@ -63,10 +65,17 @@ export class BybitService implements OnModuleDestroy {
 
     this.ws.on('reconnected', (e) => {
       Logger.warn(`[WS] reconnected ${JSON.stringify(e)}`);
-      this.resubscribeAll();
+      void this.resubscribeAll();
     });
 
-    this.ws.on('error', (e) => Logger.error(`[WS] error ${JSON.stringify(e)}`));
+    this.ws.on('error', (e: any) => {
+      const msg = String(e?.ret_msg ?? e?.message ?? e ?? '');
+      if (/already subscribed/i.test(msg)) {
+        Logger.warn(`[WS] already subscribed (downgraded): ${msg}`);
+        return;
+      }
+      Logger.error(`[WS] error ${JSON.stringify(e)}`);
+    });
 
     this.ws.on('update', (update: any) => {
       const topic: string | undefined = update?.topic;
@@ -78,6 +87,16 @@ export class BybitService implements OnModuleDestroy {
 
       // если это приватный wallet — обновим хранилку
       if (topic === 'wallet') this.ingestWalletUpdate(update);
+    });
+
+    // чтобы странные отклонённые промисы не валили процесс
+    process.on('unhandledRejection', (reason: any) => {
+      const msg = String((reason as any)?.message ?? reason ?? '');
+      if (/already subscribed/i.test(msg)) {
+        Logger.warn(`[WS] swallowed unhandledRejection: ${msg}`);
+        return;
+      }
+      Logger.error(`[WS] unhandledRejection: ${msg}`);
     });
   }
 
@@ -117,22 +136,132 @@ export class BybitService implements OnModuleDestroy {
     })).sort((a, b) => a.time - b.time);
   }
 
-  /** ------------------------ WS (pub) ------------------------ */
+  /** ------------------------ WS topic builders ------------------------ */
+
+  topicTicker(symbol: string) { return `tickers.${symbol}`; }
+  topicOrderbook(symbol: string, depth: 50 | 200 = 50) { return `orderbook.${depth}.${symbol}`; }
+  topicTrades(symbol: string) { return `publicTrade.${symbol}`; }
+  topicKline(symbol: string, interval: '1'|'3'|'5'|'15'|'30'|'60') { return `kline.${interval}.${symbol}`; }
+
+  /** ------------------------ WS subscribe helpers ------------------------ */
+
+  private wsKeyFor(category: CategoryV5 | 'unified', isPrivate = false): string {
+    if (category === 'unified') return 'v5UnifiedPrivate';
+    const cap = String(category)[0].toUpperCase() + String(category).slice(1);
+    return `v5${cap}${isPrivate ? 'Private' : 'Public'}`;
+  }
+
+  private ensureWsSet(wsKey: string): Set<string> {
+    if (!this.subsByWsKey.has(wsKey)) this.subsByWsKey.set(wsKey, new Set());
+    return this.subsByWsKey.get(wsKey)!;
+  }
+
+  private hasSub(wsKey: string, topic: string) {
+    return this.subsByWsKey.get(wsKey)?.has(topic) ?? false;
+  }
+  private markSub(wsKey: string, topic: string) {
+    this.ensureWsSet(wsKey).add(topic);
+  }
+  private unmarkSub(wsKey: string, topic: string) {
+    this.subsByWsKey.get(wsKey)?.delete(topic);
+  }
+
+  private async safeSubscribe(topics: string[], category: CategoryV5 | 'unified', isPrivate = false) {
+    const wsKey = this.wsKeyFor(category, isPrivate);
+    const need = topics.filter(t => !this.hasSub(wsKey, t));
+    if (need.length === 0) {
+      Logger.debug(`[WS] skip dup subscribe ${wsKey}: (no new topics)`);
+      return;
+    }
+
+    try {
+      await this.ws.subscribeV5(need as any, category as any);
+      need.forEach(t => this.markSub(wsKey, t));
+      Logger.log(`[WS] subscribe ${wsKey}: ${need.join(', ')}`);
+    } catch (e: any) {
+      const msg = String(e?.ret_msg ?? e?.message ?? e ?? '');
+      if (/already subscribed/i.test(msg)) {
+        Logger.warn(`[WS] already subscribed -> OK ${wsKey}: ${need.join(', ')}`);
+        need.forEach(t => this.markSub(wsKey, t));
+        return;
+      }
+      Logger.error(`[WS] subscribe failed ${wsKey}: ${msg}`);
+      throw e;
+    }
+  }
+
+  private async safeUnsubscribe(topics: string[], category: CategoryV5 | 'unified', isPrivate = false) {
+    const wsKey = this.wsKeyFor(category, isPrivate);
+    const present = topics.filter(t => this.hasSub(wsKey, t));
+    if (present.length === 0) {
+      Logger.debug(`[WS] skip unsubscribe ${wsKey}: (nothing tracked)`);
+      return;
+    }
+
+    try {
+      await this.ws.unsubscribeV5(present as any, category as any);
+      present.forEach(t => this.unmarkSub(wsKey, t));
+      Logger.log(`[WS] unsubscribe ${wsKey}: ${present.join(', ')}`);
+    } catch (e: any) {
+      const msg = String(e?.ret_msg ?? e?.message ?? e ?? '');
+      if (/not subscribed/i.test(msg)) {
+        Logger.warn(`[WS] not subscribed -> OK ${wsKey}: ${present.join(', ')}`);
+        present.forEach(t => this.unmarkSub(wsKey, t));
+        return;
+      }
+      Logger.error(`[WS] unsubscribe failed ${wsKey}: ${msg}`);
+    }
+  }
+
+  private async resubscribeAll() {
+    if (this.resubLock) return;
+    this.resubLock = true;
+    try {
+      for (const [wsKey, topics] of this.subsByWsKey.entries()) {
+        if (!topics.size) continue;
+        const isPrivate = /Private$/.test(wsKey);
+        const cat = wsKey.includes('Unified')
+          ? 'unified'
+          : wsKey.includes('Linear')
+          ? 'linear'
+          : wsKey.includes('Inverse')
+          ? 'inverse'
+          : 'spot';
+
+        for (const topic of topics) {
+          try {
+            await this.safeSubscribe([topic], cat as any, isPrivate);
+            await new Promise(r => setTimeout(r, 50)); // мягкий троттлинг
+          } catch (e) {
+            Logger.error(`[WS] resubscribe failed ${wsKey}:${topic} -> ${String((e as any)?.message ?? e)}`);
+          }
+        }
+      }
+    } finally {
+      this.resubLock = false;
+    }
+  }
+
+  /** ------------------------ Публичные подписки ------------------------ */
 
   subscribeTopic(topic: string, handler: Handler) {
     if (!this.listeners.has(topic)) this.listeners.set(topic, new Set());
     this.listeners.get(topic)!.add(handler);
 
-    const cat = this.category;
-    const catSet = this.ensureCatSet(cat);
-    if (!catSet.has(topic)) {
-      catSet.add(topic);
-      this.safeSubscribe([topic], cat);
+    const cat = this.category; // публичные фиды
+    const wsKey = this.wsKeyFor(cat, false);
+    const set = this.ensureWsSet(wsKey);
+
+    if (!set.has(topic)) {
+      void this.safeSubscribe([topic], cat, false).catch(err => {
+        Logger.error(`[WS] subscribeTopic failed ${wsKey}:${topic} -> ${String(err?.message ?? err)}`);
+      });
     }
+
     return () => this.unsubscribeTopic(topic, handler);
   }
 
-  unsubscribeTopic(topic: string, handler: Handler) {
+  async unsubscribeTopic(topic: string, handler: Handler) {
     const set = this.listeners.get(topic);
     if (!set) return;
     set.delete(handler);
@@ -140,18 +269,9 @@ export class BybitService implements OnModuleDestroy {
     if (set.size === 0) {
       this.listeners.delete(topic);
       const cat = this.category;
-      const catSet = this.ensureCatSet(cat);
-      if (catSet.has(topic)) {
-        catSet.delete(topic);
-        this.safeUnsubscribe([topic], cat);
-      }
+      await this.safeUnsubscribe([topic], cat, false);
     }
   }
-
-  topicTicker(symbol: string) { return `tickers.${symbol}`; }
-  topicOrderbook(symbol: string, depth: 50 | 200 = 50) { return `orderbook.${depth}.${symbol}`; }
-  topicTrades(symbol: string) { return `publicTrade.${symbol}`; }
-  topicKline(symbol: string, interval: '1'|'3'|'5'|'15'|'30'|'60') { return `kline.${interval}.${symbol}`; }
 
   /** ------------------------ WS (private wallet) ------------------------ */
 
@@ -160,34 +280,27 @@ export class BybitService implements OnModuleDestroy {
     if (this.walletFeedStarted) return;
     this.walletFeedStarted = true;
 
-    // 1) стянем начальный снапшот через REST
-    // try {
-    //   const { byCoin } = await this.getBalanceREST({ accountType: 'UNIFIED' });
-      
-    //   this.wallet$.next({ ts: Date.now(), byCoin });
-    // } catch (e) {
-    //   Logger.warn(`[WALLET] initial REST failed: ${String(e)}`);
-    // }
-
+    // Если хочешь «снапшот раз в N секунд» — оставь. Иначе лучше событиям WS верить.
+    // Ниже — твой же REST-луп (оставил, но имей в виду rate limits).
     setInterval(async () => {
       try {
         const { byCoin } = await this.getBalanceREST({ accountType: 'UNIFIED' });
-        
         this.wallet$.next({ ts: Date.now(), byCoin });
       } catch (e) {
-        Logger.warn(`[WALLET] initial REST failed: ${String(e)}`);
+        Logger.warn(`[WALLET] REST poll failed: ${String(e)}`);
       }
     }, 2000);
 
-    // 2) подпишемся на приватный wallet
+    // приватный wallet
     const topic = 'wallet';
     const cat = (opts?.wsCategory ?? 'unified') as any;
+    const wsKey = this.wsKeyFor(cat, true);
+    const wsSet = this.ensureWsSet(wsKey);
 
-    if (!this.listeners.has(topic)) this.listeners.set(topic, new Set());
-    const catSet = this.ensureCatSet(cat);
-    if (!catSet.has(topic)) {
-      catSet.add(topic);
-      this.safeSubscribe([topic], cat);
+    if (!wsSet.has(topic)) {
+      void this.safeSubscribe([topic], cat, true).catch(err => {
+        Logger.error(`[WALLET] subscribe failed ${wsKey}:${topic} -> ${String(err?.message ?? err)}`);
+      });
     }
     Logger.log('[WALLET] feed started');
   }
@@ -202,40 +315,7 @@ export class BybitService implements OnModuleDestroy {
     return this.wallet$.asObservable();
   }
 
-  /** ------------------------ Internal helpers ------------------------ */
-
-  private ensureCatSet(cat: CategoryV5 | 'unified'): Set<string> {
-    if (!this.activeSubs.has(cat)) this.activeSubs.set(cat, new Set());
-    return this.activeSubs.get(cat)!;
-  }
-
-  private safeSubscribe(topics: string[], category: CategoryV5 | 'unified') {
-    try {
-      this.ws.subscribeV5(topics as any, category as any);
-      Logger.log(`[WS] subscribe ${String(category)}: ${topics.join(', ')}`);
-    } catch (e) {
-      Logger.error(`[WS] subscribe failed: ${String(e)}`);
-    }
-  }
-
-  private safeUnsubscribe(topics: string[], category: CategoryV5 | 'unified') {
-    try {
-      this.ws.unsubscribeV5(topics as any, category as any);
-      Logger.log(`[WS] unsubscribe ${String(category)}: ${topics.join(', ')}`);
-    } catch (e) {
-      Logger.error(`[WS] unsubscribe failed: ${String(e)}`);
-    }
-  }
-
-  private resubscribeAll() {
-    for (const [cat, set] of this.activeSubs.entries()) {
-      if (!set.size) continue;
-      this.safeSubscribe([...set], cat);
-    }
-  }
-
   private ingestWalletUpdate(update: any) {
-    // формат Bybit: { topic:'wallet', data:[ { coin:'USDT', walletBalance:'...', ... }, ... ] }
     const prev = this.wallet$.value ?? { ts: 0, byCoin: {} as Record<string, WalletCoin> };
     const byCoin = { ...prev.byCoin };
 
@@ -279,15 +359,14 @@ export class BybitService implements OnModuleDestroy {
     return { byCoin: out };
   }
 
-  async getOpenOrders(category = 'linear', symbol?: string) {
+  /** ------------------------ Open orders / positions ------------------------ */
+
+  async getOpenOrders(category: CategoryV5 = 'linear', symbol?: string) {
     try {
-      // SDK: getActiveOrders -> maps to GET /v5/order/realtime
       const params: any = { category, openOnly: 1 };
       if (symbol) params.symbol = symbol;
-
-      const res = await this.rest.getActiveOrders({ ...params, settleCoin: "USDT" });
-      // res обычно содержит { ret_code, ret_msg, result, time_now } или уже распарсенный result
-      // Проверь структуру в своём SDK (логируем для разработки)
+      // если у тебя только USDT-перпы — оставь. Иначе дерни отдельно USDC.
+      const res = await this.rest.getActiveOrders({ ...params, settleCoin: 'USDT' });
       Logger.debug('Bybit getOpenOrders result', res);
       return res;
     } catch (err) {
@@ -296,18 +375,12 @@ export class BybitService implements OnModuleDestroy {
     }
   }
 
-  async getOpenPositions(category = 'linear', symbol?: string) {
+  async getOpenPositions(category: CategoryV5 = 'linear', symbol?: string) {
     try {
-      // В официальной доке endpoint: GET /v5/position/list
       const params: any = { category };
-      // Важное: для некоторых категорий Bybit требует либо symbol, либо settleCoin — если не передаёшь, вернётся ошибка.
       if (symbol) params.symbol = symbol;
-
-      // SDK-метод может называться getPositionList / getPositions / getPositionsList — попробуй эти имена,
-      // но обычно в SDK есть функция, которая маппится на /v5/position/list.
-      // Пробуем общепринятое имя:
-      const res = await this.rest.getPositionInfo({ ...params, settleCoin: "USDT" })
-
+      // для linear Bybit требует либо symbol, либо settleCoin → подставим USDT
+      const res = await this.rest.getPositionInfo({ ...params, settleCoin: 'USDT' });
       Logger.debug('Bybit getOpenPositions result', res);
       return res;
     } catch (err) {
