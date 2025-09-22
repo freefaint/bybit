@@ -97,7 +97,7 @@ export default function App() {
   useEffect(() => { subscribeAndPrime(pairs); }, [JSON.stringify(pairs)]);
 
   const widgets = useMemo(() => (!positions || !positions.length ? pairs : [ ...positions.reduce((coll, i) => coll.includes(i.symbol) ? coll : [ ...coll, i.symbol ], []), ...['TAUSDT', 'MYXUSDT', 'WUSDT', 'BTCUSDT'].filter(i => !positions.find(j => j.symbol === i)) ]).slice(0, 4).map((s) => (
-    <div key={s} className={positions.length && !positions?.find?.(i => i.symbol === s) ? 'burn' : ''} style={{ padding: 12 }}>
+    <div key={s} className={positions?.length && !positions?.find?.(i => i.symbol === s) ? 'burn' : ''} style={{ padding: 12 }}>
       <h4 style={{ marginTop: 0 }}>{s}</h4>
       {/* <OrderBook symbol={s} bids={orderbooks[s]?.bids || []} asks={orderbooks[s]?.asks || []} /> */}
       <CandleChart position={positions?.find?.(i => i.symbol === s)} onLoadMore={loadMore} symbol={s} candles={candles[s] || []} />
@@ -109,7 +109,7 @@ export default function App() {
   console.log(positions);
 
   useEffect(() => {
-    setPairs(positions.length ? [positions[0].symbol] : ['TAUSDT', 'MYXUSDT', 'WUSDT', 'BTCUSDT']);
+    setPairs(positions?.length ? [positions[0].symbol] : ['TAUSDT', 'MYXUSDT', 'WUSDT', 'BTCUSDT']);
   }, [JSON.stringify(positions)])
 
   return (
